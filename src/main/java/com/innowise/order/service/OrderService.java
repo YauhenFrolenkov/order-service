@@ -1,5 +1,6 @@
 package com.innowise.order.service;
 
+import com.innowise.order.dto.response.OrderResponseDto;
 import com.innowise.order.entity.Order;
 import com.innowise.order.entity.OrderStatus;
 import org.springframework.data.domain.Page;
@@ -10,10 +11,10 @@ import java.util.List;
 
 public interface OrderService {
 
-    Order createOrder(Order order);
-    Order getOrderById(Long id);
-    Page<Order> getOrders(LocalDateTime from, LocalDateTime to, List<OrderStatus> statuses, Long userId, Pageable pageable);
-    List<Order> getOrdersByUserId(Long userId);
-    Order updateOrder(Long id, Order updatedOrder);
+    OrderResponseDto createOrder(Order order);
+    OrderResponseDto getOrderById(Long id, String email);
+    Page<OrderResponseDto> getOrders(LocalDateTime from, LocalDateTime to, List<OrderStatus> statuses, Long userId, String email, Pageable pageable);
+    List<OrderResponseDto> getOrdersByUserId(Long userId, String email);
+    OrderResponseDto updateOrder(Long id, Order updatedOrder);
     void deleteOrder(Long id);
 }
