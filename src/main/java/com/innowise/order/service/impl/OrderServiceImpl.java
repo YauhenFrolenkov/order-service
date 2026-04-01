@@ -6,7 +6,9 @@ import com.innowise.order.dto.response.UserResponseDto;
 import com.innowise.order.entity.Item;
 import com.innowise.order.entity.Order;
 import com.innowise.order.entity.OrderStatus;
+import com.innowise.order.exception.ItemNotFoundException;
 import com.innowise.order.exception.OrderNotFoundException;
+import com.innowise.order.exception.UserNotAuthenticatedException;
 import com.innowise.order.mapper.OrderMapper;
 import com.innowise.order.repository.ItemRepository;
 import com.innowise.order.repository.OrderRepository;
@@ -17,6 +19,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,12 +44,15 @@ public class OrderServiceImpl  implements OrderService {
         order.setStatus(OrderStatus.CREATED);
         order.setDeleted(false);
 
+        Long userId = getCurrentUserId();
+        order.setUserId(userId);
+
         if (order.getItems() != null) {
             order.getItems().forEach(orderItem -> {
 
                 Item itemFromDb = itemRepository.findById(orderItem.getItem().getId())
                         .orElseThrow(() ->
-                                new RuntimeException("Item not found with id: " + orderItem.getItem().getId())
+                                new ItemNotFoundException("Item not found with id: " + orderItem.getItem().getId())
                         );
 
                 orderItem.setItem(itemFromDb);
@@ -54,83 +61,50 @@ public class OrderServiceImpl  implements OrderService {
         }
 
         order.setTotalPrice(calculateTotalPrice(order));
-
         Order saved = orderRepository.save(order);
 
-        return orderMapper.toDto(saved);
+        return enrichWithUser(saved);
     }
 
     @Override
     @CircuitBreaker(name = "userService", fallbackMethod = "getOrderByIdFallback")
-    public OrderResponseDto getOrderById(Long id, String email) {
-
+    public OrderResponseDto getOrderById(Long id) {
         Order order = getEntityById(id);
-        OrderResponseDto dto = orderMapper.toDto(order);
-
-        UserResponseDto user = userServiceClient.getUserByEmail(email);
-
-        dto.setUserEmail(user.getEmail());
-        dto.setUserName(user.getName() + " " + user.getSurname());
-
-        return dto;
+        return enrichWithUser(order);
     }
 
-    public OrderResponseDto getOrderByIdFallback(Long id, String email, Throwable ex) {
+    public OrderResponseDto getOrderByIdFallback(Long id, Throwable ex) {
 
         Order order = getEntityById(id);
         OrderResponseDto dto = orderMapper.toDto(order);
-
-        dto.setUserEmail(email);
+        dto.setUserEmail("unknown@example.com");
         dto.setUserName("Unknown User");
-
         return dto;
     }
 
     @Override
     @CircuitBreaker(name = "userService", fallbackMethod = "getOrdersFallback")
-    public Page<OrderResponseDto> getOrders(LocalDateTime from,
-                                 LocalDateTime to,
-                                 List<OrderStatus> statuses,
-                                 Long userId,
-                                 String email,
-                                 Pageable pageable) {
+    public Page<OrderResponseDto> getOrders(LocalDateTime from, LocalDateTime to, List<OrderStatus> statuses, Long userIdFilter, Pageable pageable) {
 
         Specification<Order> spec = OrderSpecification.notDeleted()
-                .and(OrderSpecification.hasUserId(userId))
+                .and(OrderSpecification.hasUserId(userIdFilter))
                 .and(OrderSpecification.hasStatuses(statuses))
                 .and(OrderSpecification.createdAfter(from))
                 .and(OrderSpecification.createdBefore(to));
 
         Page<Order> orders = orderRepository.findAll(spec, pageable);
 
-        return orders.map(order -> {
-            OrderResponseDto dto = orderMapper.toDto(order);
-
-            UserResponseDto user = userServiceClient.getUserByEmail(email);
-
-            dto.setUserEmail(user.getEmail());
-            dto.setUserName(user.getName() + " " + user.getSurname());
-
-            return dto;
-        });
+        return orders.map(this::enrichWithUser);
     }
 
-    public Page<OrderResponseDto> getOrdersFallback(
-            LocalDateTime from,
-            LocalDateTime to,
-            List<OrderStatus> statuses,
-            Long userId,
-            String email,
-            Pageable pageable,
-            Throwable ex
-    ) {
+    public Page<OrderResponseDto> getOrdersFallback(LocalDateTime from, LocalDateTime to, List<OrderStatus> statuses, Long userIdFilter, Pageable pageable, Throwable ex) {
 
         Page<Order> orders = orderRepository.findAll(pageable);
 
         return orders.map(order -> {
             OrderResponseDto dto = orderMapper.toDto(order);
 
-            dto.setUserEmail(email);
+            dto.setUserEmail("unknown@example.com");
             dto.setUserName("Unknown User");
 
             return dto;
@@ -139,14 +113,13 @@ public class OrderServiceImpl  implements OrderService {
 
     @Override
     @CircuitBreaker(name = "userService", fallbackMethod = "getOrdersByUserFallback")
-    public List<OrderResponseDto> getOrdersByUserId(Long userId, String email) {
-        List<Order> orders = orderRepository.findByUserIdAndDeletedFalse(userId);
+    public List<OrderResponseDto> getOrdersByUserId(Long userIdFilter) {
+        List<Order> orders = orderRepository.findByUserIdAndDeletedFalse(userIdFilter);
+        UserResponseDto user = userServiceClient.getUserById(userIdFilter);
 
         return orders.stream()
                 .map(order -> {
                     OrderResponseDto dto = orderMapper.toDto(order);
-
-                    UserResponseDto user = userServiceClient.getUserByEmail(email);
 
                     dto.setUserEmail(user.getEmail());
                     dto.setUserName(user.getName() + " " + user.getSurname());
@@ -156,17 +129,16 @@ public class OrderServiceImpl  implements OrderService {
                 .toList();
     }
 
-    public List<OrderResponseDto> getOrdersByUserFallback(Long userId, String email, Throwable ex) {
+    public List<OrderResponseDto> getOrdersByUserFallback(Long userIdFilter, Throwable ex) {
 
-        List<Order> orders = orderRepository.findByUserIdAndDeletedFalse(userId);
+        List<Order> orders = orderRepository.findByUserIdAndDeletedFalse(userIdFilter);
 
         return orders.stream()
                 .map(order -> {
                     OrderResponseDto dto = orderMapper.toDto(order);
 
-                    dto.setUserEmail(email);
+                    dto.setUserEmail("unknown@example.com");
                     dto.setUserName("Unknown User");
-
                     return dto;
                 })
                 .toList();
@@ -186,7 +158,7 @@ public class OrderServiceImpl  implements OrderService {
 
                 Item itemFromDb = itemRepository.findById(orderItem.getItem().getId())
                         .orElseThrow(() ->
-                                new RuntimeException("Item not found with id: " + orderItem.getItem().getId())
+                                new ItemNotFoundException("Item not found with id: " + orderItem.getItem().getId())
                         );
 
                 orderItem.setItem(itemFromDb);
@@ -200,7 +172,7 @@ public class OrderServiceImpl  implements OrderService {
 
         Order saved = orderRepository.save(existing);
 
-        return orderMapper.toDto(saved);
+        return enrichWithUser(saved);
     }
 
     @Override
@@ -210,6 +182,25 @@ public class OrderServiceImpl  implements OrderService {
         order.setDeleted(true);
 
         orderRepository.save(order);
+    }
+
+    private OrderResponseDto enrichWithUser(Order order) {
+        OrderResponseDto dto = orderMapper.toDto(order);
+        UserResponseDto user = userServiceClient.getUserById(order.getUserId());
+
+        dto.setUserEmail(user.getEmail());
+        dto.setUserName(user.getName() + " " + user.getSurname());
+        return dto;
+    }
+
+    private Long getCurrentUserId() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !(authentication.getPrincipal() instanceof Long)) {
+            throw new UserNotAuthenticatedException("User is not authenticated");
+        }
+
+        return (Long) authentication.getPrincipal();
     }
 
     private Order getEntityById(Long id) {

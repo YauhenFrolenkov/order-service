@@ -15,6 +15,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -33,19 +34,19 @@ public class OrderController {
             @RequestBody @Valid CreateOrderRequestDto dto
     ) {
         Order order = orderMapper.toEntity(dto);
-
         OrderResponseDto response = orderService.createOrder(order);
-
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(response);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<OrderResponseDto> getOrderById(@PathVariable Long id, @RequestParam String email) {
-        return ResponseEntity.ok(orderService.getOrderById(id, email)); // временно
+    @PreAuthorize("hasRole('ADMIN') or @orderSecurity.isOrderOwner(#id, authentication)")
+    public ResponseEntity<OrderResponseDto> getOrderById(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.getOrderById(id));
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<OrderResponseDto>> getOrders(
             @RequestParam(required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
@@ -57,29 +58,29 @@ public class OrderController {
 
             @RequestParam(required = false) List<OrderStatus> statuses,
             @RequestParam(required = false) Long userId,
+            Pageable pageable) {
 
-            @RequestParam String email, // временно
-            Pageable pageable
-    ) {
-        return ResponseEntity.ok(orderService.getOrders(from, to, statuses, userId, email, pageable));
+        return ResponseEntity.ok(orderService.getOrders(from, to, statuses, userId, pageable));
     }
 
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<OrderResponseDto>> getOrdersByUserId(@PathVariable Long userId, @RequestParam String email) {
-        return ResponseEntity.ok(orderService.getOrdersByUserId(userId, email));
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
+    public ResponseEntity<List<OrderResponseDto>> getOrdersByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(orderService.getOrdersByUserId(userId));
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @orderSecurity.isOrderOwner(#id, authentication)")
     public ResponseEntity<OrderResponseDto> updateOrder(
             @PathVariable Long id,
             @RequestBody @Valid UpdateOrderRequestDto dto
     ) {
         Order order = orderMapper.toEntity(dto);
-
         return ResponseEntity.ok(orderService.updateOrder(id, order));
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
         orderService.deleteOrder(id);
         return ResponseEntity.noContent().build();

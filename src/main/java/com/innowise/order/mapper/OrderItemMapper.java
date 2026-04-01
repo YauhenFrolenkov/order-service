@@ -6,8 +6,6 @@ import com.innowise.order.entity.OrderItem;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import java.util.List;
-
 @Mapper(componentModel = "spring", uses = {ItemMapper.class})
 public interface OrderItemMapper {
 
@@ -21,5 +19,4 @@ public interface OrderItemMapper {
     @Mapping(target = "price", source = "item.price")
     OrderItemResponseDto toDto(OrderItem item);
 
-    List<OrderItemResponseDto> toDtoList(List<OrderItem> items);
 }

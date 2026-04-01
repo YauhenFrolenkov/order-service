@@ -12,9 +12,9 @@ import java.util.List;
 public interface OrderService {
 
     OrderResponseDto createOrder(Order order);
-    OrderResponseDto getOrderById(Long id, String email);
-    Page<OrderResponseDto> getOrders(LocalDateTime from, LocalDateTime to, List<OrderStatus> statuses, Long userId, String email, Pageable pageable);
-    List<OrderResponseDto> getOrdersByUserId(Long userId, String email);
+    OrderResponseDto getOrderById(Long id);
+    Page<OrderResponseDto> getOrders(LocalDateTime from, LocalDateTime to, List<OrderStatus> statuses, Long userId, Pageable pageable);
+    List<OrderResponseDto> getOrdersByUserId(Long userId);
     OrderResponseDto updateOrder(Long id, Order updatedOrder);
     void deleteOrder(Long id);
 }
