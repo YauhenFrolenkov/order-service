@@ -37,6 +37,9 @@ public class OrderServiceImpl  implements OrderService {
     private final UserServiceClient userServiceClient;
     private final ItemRepository itemRepository;
 
+    private static final String UNKNOWN_EMAIL = "unknown@example.com";
+    private static final String UNKNOWN_USER = "Unknown User";
+
     @Override
     @Transactional
     public OrderResponseDto createOrder(Order order) {
@@ -73,12 +76,13 @@ public class OrderServiceImpl  implements OrderService {
         return enrichWithUser(order);
     }
 
+    @SuppressWarnings("unused")
     public OrderResponseDto getOrderByIdFallback(Long id, Throwable ex) {
 
         Order order = getEntityById(id);
         OrderResponseDto dto = orderMapper.toDto(order);
-        dto.setUserEmail("unknown@example.com");
-        dto.setUserName("Unknown User");
+        dto.setUserEmail(UNKNOWN_EMAIL);
+        dto.setUserName(UNKNOWN_USER);
         return dto;
     }
 
@@ -97,6 +101,7 @@ public class OrderServiceImpl  implements OrderService {
         return orders.map(this::enrichWithUser);
     }
 
+    @SuppressWarnings("unused")
     public Page<OrderResponseDto> getOrdersFallback(LocalDateTime from, LocalDateTime to, List<OrderStatus> statuses, Long userIdFilter, Pageable pageable, Throwable ex) {
 
         Page<Order> orders = orderRepository.findAll(pageable);
@@ -104,8 +109,8 @@ public class OrderServiceImpl  implements OrderService {
         return orders.map(order -> {
             OrderResponseDto dto = orderMapper.toDto(order);
 
-            dto.setUserEmail("unknown@example.com");
-            dto.setUserName("Unknown User");
+            dto.setUserEmail(UNKNOWN_EMAIL);
+            dto.setUserName(UNKNOWN_USER);
 
             return dto;
         });
@@ -129,6 +134,7 @@ public class OrderServiceImpl  implements OrderService {
                 .toList();
     }
 
+    @SuppressWarnings("unused")
     public List<OrderResponseDto> getOrdersByUserFallback(Long userIdFilter, Throwable ex) {
 
         List<Order> orders = orderRepository.findByUserIdAndDeletedFalse(userIdFilter);
@@ -137,8 +143,8 @@ public class OrderServiceImpl  implements OrderService {
                 .map(order -> {
                     OrderResponseDto dto = orderMapper.toDto(order);
 
-                    dto.setUserEmail("unknown@example.com");
-                    dto.setUserName("Unknown User");
+                    dto.setUserEmail(UNKNOWN_EMAIL);
+                    dto.setUserName(UNKNOWN_USER);
                     return dto;
                 })
                 .toList();

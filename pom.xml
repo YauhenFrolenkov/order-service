@@ -15,6 +15,7 @@
 		<java.version>21</java.version>
 		<spring-cloud.version>2025.0.1</spring-cloud.version>
 		<jacoco.version>0.8.11</jacoco.version>
+		<sonar.coverage.exclusions>**/dto/**,**/config/**,**/mapper/**,**/client/**,**/specification/**</sonar.coverage.exclusions>
 	</properties>
 
 	<dependencyManagement>

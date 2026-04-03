@@ -17,6 +17,7 @@ public class UserServiceClient {
         return userClient.getUserById(id);
     }
 
+    @SuppressWarnings("unused")
     public UserResponseDto fallbackGetUser(Long id, Throwable ex) {
         UserResponseDto user = new UserResponseDto();
         user.setId(id);

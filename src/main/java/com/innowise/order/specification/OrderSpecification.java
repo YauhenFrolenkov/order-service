@@ -9,6 +9,9 @@ import java.util.List;
 
 public class OrderSpecification {
 
+    private OrderSpecification() {
+    }
+
     public static Specification<Order> hasUserId(Long userId) {
         return (root, query, cb) ->
                 userId == null ? null : cb.equal(root.get("userId"), userId);

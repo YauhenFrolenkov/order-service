@@ -65,7 +65,6 @@ class OrderServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Настройка SecurityContext
         Authentication auth = new UsernamePasswordAuthenticationToken(10L, null, List.of());
         SecurityContext context = SecurityContextHolder.createEmptyContext();
         context.setAuthentication(auth);
@@ -309,6 +308,57 @@ class OrderServiceImplTest {
         OrderResponseDto result = orderService.updateOrder(1L, updatedOrder);
 
         assertNotNull(result);
+    }
+
+    @Test
+    void testGetOrderByIdFallback() {
+        when(orderRepository.findByIdAndDeletedFalse(1L))
+                .thenReturn(Optional.of(order));
+
+        when(orderMapper.toDto(order))
+                .thenReturn(orderResponseDto);
+
+        OrderResponseDto result =
+                orderService.getOrderByIdFallback(1L, new RuntimeException());
+
+        assertNotNull(result);
+        assertEquals("unknown@example.com", result.getUserEmail());
+        assertEquals("Unknown User", result.getUserName());
+    }
+
+    @Test
+    void testGetOrdersFallback() {
+        Page<Order> page = new PageImpl<>(List.of(order));
+
+        when(orderRepository.findAll(any(Pageable.class)))
+                .thenReturn(page);
+
+        when(orderMapper.toDto(any(Order.class)))
+                .thenReturn(orderResponseDto);
+
+        Page<OrderResponseDto> result =
+                orderService.getOrdersFallback(
+                        null, null, null, null,
+                        PageRequest.of(0, 10),
+                        new RuntimeException()
+                );
+
+        assertEquals(1, result.getTotalElements());
+    }
+
+    @Test
+    void testGetOrdersByUserFallback() {
+
+        when(orderRepository.findByUserIdAndDeletedFalse(10L))
+                .thenReturn(List.of(order));
+
+        when(orderMapper.toDto(order))
+                .thenReturn(orderResponseDto);
+
+        List<OrderResponseDto> result =
+                orderService.getOrdersByUserFallback(10L, new RuntimeException());
+
+        assertEquals(1, result.size());
     }
 
     @AfterEach
