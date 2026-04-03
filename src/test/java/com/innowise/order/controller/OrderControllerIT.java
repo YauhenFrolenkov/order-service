@@ -46,7 +46,7 @@ class OrderControllerIT {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("user-service.url", () -> "http://localhost:8081");
+        registry.add("user-service.url", () -> "http://localhost:8080");
     }
 
     static WireMockServer wireMockServer;
@@ -73,9 +73,9 @@ class OrderControllerIT {
 
     @BeforeAll
     static void beforeAll() {
-        wireMockServer = new WireMockServer(8081);
+        wireMockServer = new WireMockServer(8080);
         wireMockServer.start();
-        configureFor("localhost", 8081);
+        configureFor("localhost", 8080);
     }
 
     @AfterAll
