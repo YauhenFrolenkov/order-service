@@ -116,7 +116,7 @@ class OrderControllerTest {
     void testGetOrdersByUserId() throws Exception {
         when(orderService.getOrdersByUserId(10L)).thenReturn(List.of(responseDto));
 
-        mockMvc.perform(get("/orders/user/10"))
+        mockMvc.perform(get("/orders/user/10/orders"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1));
     }

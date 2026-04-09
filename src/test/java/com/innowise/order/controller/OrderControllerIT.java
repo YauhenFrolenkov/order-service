@@ -35,9 +35,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class OrderControllerIT {
 
-    static {
-        System.setProperty("TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE", "npipe:////./pipe/docker_engine");
-    }
 
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:15")
@@ -45,9 +42,6 @@ class OrderControllerIT {
             .withUsername("user")
             .withPassword("password");
 
-    static {
-        postgres.start();
-    }
 
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {

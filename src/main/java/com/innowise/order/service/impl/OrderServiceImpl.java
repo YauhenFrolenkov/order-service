@@ -14,7 +14,6 @@ import com.innowise.order.repository.ItemRepository;
 import com.innowise.order.repository.OrderRepository;
 import com.innowise.order.service.OrderService;
 import com.innowise.order.specification.OrderSpecification;
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,9 +35,6 @@ public class OrderServiceImpl  implements OrderService {
     private final OrderMapper orderMapper;
     private final UserServiceClient userServiceClient;
     private final ItemRepository itemRepository;
-
-    private static final String UNKNOWN_EMAIL = "unknown@example.com";
-    private static final String UNKNOWN_USER = "Unknown User";
 
     @Override
     @Transactional
@@ -70,24 +66,12 @@ public class OrderServiceImpl  implements OrderService {
     }
 
     @Override
-    @CircuitBreaker(name = "userService", fallbackMethod = "getOrderByIdFallback")
     public OrderResponseDto getOrderById(Long id) {
         Order order = getEntityById(id);
         return enrichWithUser(order);
     }
 
-    @SuppressWarnings("unused")
-    public OrderResponseDto getOrderByIdFallback(Long id, Throwable ex) {
-
-        Order order = getEntityById(id);
-        OrderResponseDto dto = orderMapper.toDto(order);
-        dto.setUserEmail(UNKNOWN_EMAIL);
-        dto.setUserName(UNKNOWN_USER);
-        return dto;
-    }
-
     @Override
-    @CircuitBreaker(name = "userService", fallbackMethod = "getOrdersFallback")
     public Page<OrderResponseDto> getOrders(LocalDateTime from, LocalDateTime to, List<OrderStatus> statuses, Long userIdFilter, Pageable pageable) {
 
         Specification<Order> spec = OrderSpecification.notDeleted()
@@ -101,23 +85,7 @@ public class OrderServiceImpl  implements OrderService {
         return orders.map(this::enrichWithUser);
     }
 
-    @SuppressWarnings("unused")
-    public Page<OrderResponseDto> getOrdersFallback(LocalDateTime from, LocalDateTime to, List<OrderStatus> statuses, Long userIdFilter, Pageable pageable, Throwable ex) {
-
-        Page<Order> orders = orderRepository.findAll(pageable);
-
-        return orders.map(order -> {
-            OrderResponseDto dto = orderMapper.toDto(order);
-
-            dto.setUserEmail(UNKNOWN_EMAIL);
-            dto.setUserName(UNKNOWN_USER);
-
-            return dto;
-        });
-    }
-
     @Override
-    @CircuitBreaker(name = "userService", fallbackMethod = "getOrdersByUserFallback")
     public List<OrderResponseDto> getOrdersByUserId(Long userIdFilter) {
         List<Order> orders = orderRepository.findByUserIdAndDeletedFalse(userIdFilter);
         UserResponseDto user = userServiceClient.getUserById(userIdFilter);
@@ -129,22 +97,6 @@ public class OrderServiceImpl  implements OrderService {
                     dto.setUserEmail(user.getEmail());
                     dto.setUserName(user.getName() + " " + user.getSurname());
 
-                    return dto;
-                })
-                .toList();
-    }
-
-    @SuppressWarnings("unused")
-    public List<OrderResponseDto> getOrdersByUserFallback(Long userIdFilter, Throwable ex) {
-
-        List<Order> orders = orderRepository.findByUserIdAndDeletedFalse(userIdFilter);
-
-        return orders.stream()
-                .map(order -> {
-                    OrderResponseDto dto = orderMapper.toDto(order);
-
-                    dto.setUserEmail(UNKNOWN_EMAIL);
-                    dto.setUserName(UNKNOWN_USER);
                     return dto;
                 })
                 .toList();

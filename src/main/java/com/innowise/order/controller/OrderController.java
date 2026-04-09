@@ -63,7 +63,7 @@ public class OrderController {
         return ResponseEntity.ok(orderService.getOrders(from, to, statuses, userId, pageable));
     }
 
-    @GetMapping("/user/{userId}")
+    @GetMapping("/user/{userId}/orders")
     @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
     public ResponseEntity<List<OrderResponseDto>> getOrdersByUserId(@PathVariable Long userId) {
         return ResponseEntity.ok(orderService.getOrdersByUserId(userId));
