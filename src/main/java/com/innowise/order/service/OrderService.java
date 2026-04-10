@@ -3,7 +3,6 @@ package com.innowise.order.service;
 import com.innowise.order.dto.request.CreateOrderRequestDto;
 import com.innowise.order.dto.request.UpdateOrderRequestDto;
 import com.innowise.order.dto.response.OrderResponseDto;
-import com.innowise.order.entity.Order;
 import com.innowise.order.entity.OrderStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
