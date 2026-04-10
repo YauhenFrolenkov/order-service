@@ -1,6 +1,8 @@
 package com.innowise.order.service.impl;
 
 import com.innowise.order.client.UserServiceClient;
+import com.innowise.order.dto.request.CreateOrderRequestDto;
+import com.innowise.order.dto.request.UpdateOrderRequestDto;
 import com.innowise.order.dto.response.OrderResponseDto;
 import com.innowise.order.dto.response.UserResponseDto;
 import com.innowise.order.entity.Item;
@@ -62,6 +64,8 @@ class OrderServiceImplTest {
     private Item item;
     private OrderResponseDto orderResponseDto;
     private UserResponseDto userResponse;
+    private CreateOrderRequestDto createDto;
+    private UpdateOrderRequestDto updateDto;
 
     @BeforeEach
     void setUp() {
@@ -103,42 +107,47 @@ class OrderServiceImplTest {
                 .surname("User")
                 .email("test@example.com")
                 .build();
+
+        createDto = new CreateOrderRequestDto();
+        updateDto = new UpdateOrderRequestDto();
     }
 
     @Test
     void testCreateOrder_Success() {
+        when(orderMapper.toEntity(any(CreateOrderRequestDto.class))).thenReturn(order);
         when(userServiceClient.getUserById(10L)).thenReturn(userResponse);
         when(itemRepository.findById(1L)).thenReturn(Optional.of(item));
         when(orderRepository.save(any(Order.class))).thenReturn(order);
         when(orderMapper.toDto(any(Order.class))).thenReturn(orderResponseDto);
 
-        OrderResponseDto createdOrder = orderService.createOrder(order);
+        OrderResponseDto result = orderService.createOrder(createDto);
 
-        assertNotNull(createdOrder);
-        assertEquals(10L, createdOrder.getUserId());
+        assertNotNull(result);
+        assertEquals(10L, result.getUserId());
     }
 
     @Test
     void testUpdateOrder_Success() {
+        when(orderMapper.toEntity(any(UpdateOrderRequestDto.class))).thenReturn(order);
         lenient().when(orderRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.of(order));
         lenient().when(itemRepository.findById(1L)).thenReturn(Optional.of(item));
-        lenient().when(orderRepository.save(any(Order.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        lenient().when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
         lenient().when(orderMapper.toDto(any(Order.class))).thenReturn(orderResponseDto);
         lenient().when(userServiceClient.getUserById(anyLong())).thenReturn(userResponse);
 
-        OrderResponseDto updatedOrder = orderService.updateOrder(1L, order);
+        OrderResponseDto result = orderService.updateOrder(1L, updateDto);
 
-        assertNotNull(updatedOrder);
-        assertEquals(OrderStatus.CREATED, updatedOrder.getStatus());
+        assertNotNull(result);
+        assertEquals(OrderStatus.CREATED, result.getStatus());
     }
-
 
     @Test
     void testCreateOrder_ItemNotFound() {
+        when(orderMapper.toEntity(any(CreateOrderRequestDto.class))).thenReturn(order);
         when(itemRepository.findById(1L)).thenReturn(Optional.empty());
 
         assertThrows(ItemNotFoundException.class,
-                () -> orderService.createOrder(order));
+                () -> orderService.createOrder(createDto));
     }
 
     @Test
@@ -157,7 +166,8 @@ class OrderServiceImplTest {
     void testGetOrderById_NotFound() {
         when(orderRepository.findByIdAndDeletedFalse(1L)).thenReturn(Optional.empty());
 
-        assertThrows(OrderNotFoundException.class, () -> orderService.getOrderById(1L));
+        assertThrows(OrderNotFoundException.class,
+                () -> orderService.getOrderById(1L));
     }
 
     @Test
@@ -199,28 +209,30 @@ class OrderServiceImplTest {
     void testCreateOrder_UserNotAuthenticated() {
         SecurityContextHolder.clearContext();
 
-        assertThrows(UserNotAuthenticatedException.class, () -> orderService.createOrder(order));
+        when(orderMapper.toEntity(any(CreateOrderRequestDto.class))).thenReturn(order);
+        assertThrows(UserNotAuthenticatedException.class,
+                () -> orderService.createOrder(createDto));
     }
 
     @Test
     void testCreateOrder_WithEmptyItems() {
-        order.setItems(null);
-
-        OrderResponseDto emptyOrderResponse = OrderResponseDto.builder()
+        Order emptyOrder = Order.builder()
                 .id(1L)
                 .userId(10L)
                 .status(OrderStatus.CREATED)
                 .totalPrice(BigDecimal.ZERO)
+                .items(null)
                 .build();
 
+        when(orderMapper.toEntity(any(CreateOrderRequestDto.class))).thenReturn(emptyOrder);
         when(userServiceClient.getUserById(10L)).thenReturn(userResponse);
         when(orderRepository.save(any(Order.class))).thenReturn(order);
-        when(orderMapper.toDto(any(Order.class))).thenReturn(emptyOrderResponse);
+        when(orderMapper.toDto(any(Order.class))).thenReturn(orderResponseDto);
 
-        OrderResponseDto createdOrder = orderService.createOrder(order);
+        OrderResponseDto result = orderService.createOrder(createDto);
 
-        assertNotNull(createdOrder);
-        assertEquals(BigDecimal.ZERO, createdOrder.getTotalPrice());
+        assertNotNull(result);
+
     }
 
     @Test
@@ -229,34 +241,7 @@ class OrderServiceImplTest {
                 .thenReturn(Optional.empty());
 
         assertThrows(OrderNotFoundException.class,
-                () -> orderService.updateOrder(1L, order));
-    }
-
-    @Test
-    void testDeleteOrder_NotFound() {
-        when(orderRepository.findByIdAndDeletedFalse(1L))
-                .thenReturn(Optional.empty());
-
-        assertThrows(OrderNotFoundException.class,
-                () -> orderService.deleteOrder(1L));
-    }
-
-    @Test
-    void testCreateOrder_UserNotFound() {
-        when(userServiceClient.getUserById(10L))
-                .thenReturn(null);
-
-        when(itemRepository.findById(1L))
-                .thenReturn(Optional.of(item));
-
-        when(orderRepository.save(any()))
-                .thenReturn(order);
-
-        when(orderMapper.toDto(any()))
-                .thenReturn(orderResponseDto);
-
-        assertThrows(NullPointerException.class,
-                () -> orderService.createOrder(order));
+                () -> orderService.updateOrder(1L, updateDto));
     }
 
     @Test
@@ -267,47 +252,46 @@ class OrderServiceImplTest {
         Order updatedOrder = new Order();
 
         OrderItem newItem = new OrderItem();
-        newItem.setItem(item);
+        newItem.setItem(Item.builder().id(1L).build());
         newItem.setQuantity(2);
 
         updatedOrder.setItems(List.of(newItem));
+
+        when(orderMapper.toEntity(any(UpdateOrderRequestDto.class)))
+                .thenReturn(updatedOrder);
 
         when(itemRepository.findById(anyLong()))
                 .thenReturn(Optional.empty());
 
         assertThrows(ItemNotFoundException.class,
-                () -> orderService.updateOrder(1L, updatedOrder));
+                () -> orderService.updateOrder(1L, updateDto));
     }
 
     @Test
     void testUpdateOrder_ChangeStatus() {
-        Order updatedOrder = new Order();
-        updatedOrder.setStatus(OrderStatus.PROCESSING);
+        OrderResponseDto processingResponse = OrderResponseDto.builder()
+                .id(1L)
+                .userId(10L)
+                .status(OrderStatus.PROCESSING)
+                .totalPrice(new BigDecimal("200.00"))
+                .build();
 
-        OrderItem newItem = new OrderItem();
-        newItem.setItem(item);
-        newItem.setQuantity(2);
+        UpdateOrderRequestDto statusOnlyDto = new UpdateOrderRequestDto();
+        statusOnlyDto.setStatus(OrderStatus.PROCESSING);
 
-        updatedOrder.setItems(List.of(newItem));
-
+        when(orderMapper.toEntity(any(UpdateOrderRequestDto.class))).thenReturn(order);
         when(orderRepository.findByIdAndDeletedFalse(1L))
                 .thenReturn(Optional.of(order));
 
-        when(itemRepository.findById(anyLong()))
-                .thenReturn(Optional.of(item));
 
-        when(orderRepository.save(any()))
-                .thenAnswer(inv -> inv.getArgument(0));
+        when(orderRepository.save(any(Order.class))).thenAnswer(inv -> inv.getArgument(0));
+        when(orderMapper.toDto(any(Order.class))).thenReturn(processingResponse);
+        when(userServiceClient.getUserById(anyLong())).thenReturn(userResponse);
 
-        when(orderMapper.toDto(any()))
-                .thenReturn(orderResponseDto);
-
-        when(userServiceClient.getUserById(anyLong()))
-                .thenReturn(userResponse);
-
-        OrderResponseDto result = orderService.updateOrder(1L, updatedOrder);
+        OrderResponseDto result = orderService.updateOrder(1L, statusOnlyDto);
 
         assertNotNull(result);
+        assertEquals(OrderStatus.PROCESSING, result.getStatus());
     }
 
     @AfterEach

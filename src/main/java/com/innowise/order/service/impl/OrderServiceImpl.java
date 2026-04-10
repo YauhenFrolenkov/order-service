@@ -1,6 +1,8 @@
 package com.innowise.order.service.impl;
 
 import com.innowise.order.client.UserServiceClient;
+import com.innowise.order.dto.request.CreateOrderRequestDto;
+import com.innowise.order.dto.request.UpdateOrderRequestDto;
 import com.innowise.order.dto.response.OrderResponseDto;
 import com.innowise.order.dto.response.UserResponseDto;
 import com.innowise.order.entity.Item;
@@ -38,7 +40,9 @@ public class OrderServiceImpl  implements OrderService {
 
     @Override
     @Transactional
-    public OrderResponseDto createOrder(Order order) {
+    public OrderResponseDto createOrder(CreateOrderRequestDto dto) {
+
+        Order order = orderMapper.toEntity(dto);
         order.setId(null);
         order.setStatus(OrderStatus.CREATED);
         order.setDeleted(false);
@@ -104,8 +108,10 @@ public class OrderServiceImpl  implements OrderService {
 
     @Override
     @Transactional
-    public OrderResponseDto updateOrder(Long id, Order updatedOrder) {
+    public OrderResponseDto updateOrder(Long id, UpdateOrderRequestDto dto) {
         Order existing = getEntityById(id);
+
+        Order updatedOrder = orderMapper.toEntity(dto);
 
         existing.setStatus(updatedOrder.getStatus());
 

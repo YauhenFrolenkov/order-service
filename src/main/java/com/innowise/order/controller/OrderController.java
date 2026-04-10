@@ -4,7 +4,6 @@ package com.innowise.order.controller;
 import com.innowise.order.dto.request.CreateOrderRequestDto;
 import com.innowise.order.dto.request.UpdateOrderRequestDto;
 import com.innowise.order.dto.response.OrderResponseDto;
-import com.innowise.order.entity.Order;
 import com.innowise.order.entity.OrderStatus;
 import com.innowise.order.mapper.OrderMapper;
 import com.innowise.order.service.OrderService;
@@ -27,16 +26,13 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
-    private final OrderMapper orderMapper;
 
     @PostMapping
     public ResponseEntity<OrderResponseDto> createOrder(
             @RequestBody @Valid CreateOrderRequestDto dto
     ) {
-        Order order = orderMapper.toEntity(dto);
-        OrderResponseDto response = orderService.createOrder(order);
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(response);
+                .body(orderService.createOrder(dto));
     }
 
     @GetMapping("/{id}")
@@ -75,8 +71,7 @@ public class OrderController {
             @PathVariable Long id,
             @RequestBody @Valid UpdateOrderRequestDto dto
     ) {
-        Order order = orderMapper.toEntity(dto);
-        return ResponseEntity.ok(orderService.updateOrder(id, order));
+        return ResponseEntity.ok(orderService.updateOrder(id, dto));
     }
 
     @DeleteMapping("/{id}")
