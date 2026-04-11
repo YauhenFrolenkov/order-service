@@ -1,0 +1,82 @@
+package com.innowise.order.controller;
+
+
+import com.innowise.order.dto.request.CreateOrderRequestDto;
+import com.innowise.order.dto.request.UpdateOrderRequestDto;
+import com.innowise.order.dto.response.OrderResponseDto;
+import com.innowise.order.entity.OrderStatus;
+import com.innowise.order.service.OrderService;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.util.List;
+
+@RestController
+@RequestMapping("/orders")
+@RequiredArgsConstructor
+public class OrderController {
+
+    private final OrderService orderService;
+
+    @PostMapping
+    public ResponseEntity<OrderResponseDto> createOrder(
+            @RequestBody @Valid CreateOrderRequestDto dto
+    ) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(orderService.createOrder(dto));
+    }
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @orderSecurity.isOrderOwner(#id, authentication)")
+    public ResponseEntity<OrderResponseDto> getOrderById(@PathVariable Long id) {
+        return ResponseEntity.ok(orderService.getOrderById(id));
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<OrderResponseDto>> getOrders(
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime from,
+
+            @RequestParam(required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
+            LocalDateTime to,
+
+            @RequestParam(required = false) List<OrderStatus> statuses,
+            @RequestParam(required = false) Long userId,
+            Pageable pageable) {
+
+        return ResponseEntity.ok(orderService.getOrders(from, to, statuses, userId, pageable));
+    }
+
+    @GetMapping("/user/{userId}/orders")
+    @PreAuthorize("hasRole('ADMIN') or #userId == authentication.principal")
+    public ResponseEntity<List<OrderResponseDto>> getOrdersByUserId(@PathVariable Long userId) {
+        return ResponseEntity.ok(orderService.getOrdersByUserId(userId));
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or @orderSecurity.isOrderOwner(#id, authentication)")
+    public ResponseEntity<OrderResponseDto> updateOrder(
+            @PathVariable Long id,
+            @RequestBody @Valid UpdateOrderRequestDto dto
+    ) {
+        return ResponseEntity.ok(orderService.updateOrder(id, dto));
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
+        orderService.deleteOrder(id);
+        return ResponseEntity.noContent().build();
+    }
+}
