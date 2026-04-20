@@ -148,6 +148,27 @@ public class OrderServiceImpl  implements OrderService {
         orderRepository.save(order);
     }
 
+    @Override
+    @Transactional
+    public void markAsPaid(Long orderId) {
+        updateStatus(orderId, OrderStatus.COMPLETED);
+    }
+
+    @Override
+    @Transactional
+    public void markAsFailed(Long orderId) {
+        updateStatus(orderId, OrderStatus.CANCELLED);
+    }
+
+    private void updateStatus(Long orderId, OrderStatus status) {
+        Order order = getEntityById(orderId);
+
+        if (order.getStatus() == OrderStatus.COMPLETED || order.getStatus() == OrderStatus.CANCELLED) {
+            return;
+        }
+        order.setStatus(status);
+    }
+
     private OrderResponseDto enrichWithUser(Order order) {
         OrderResponseDto dto = orderMapper.toDto(order);
         UserResponseDto user = userServiceClient.getUserById(order.getUserId());

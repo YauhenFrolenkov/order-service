@@ -15,7 +15,7 @@
 		<java.version>21</java.version>
 		<spring-cloud.version>2025.0.1</spring-cloud.version>
 		<jacoco.version>0.8.11</jacoco.version>
-		<sonar.coverage.exclusions>**/dto/**,**/config/**,**/mapper/**,**/client/**,**/specification/**</sonar.coverage.exclusions>
+		<sonar.coverage.exclusions>**/dto/**,**/config/**,**/mapper/**,**/client/**,**/specification/**,**/kafka/**</sonar.coverage.exclusions>
 	</properties>
 
 	<dependencyManagement>
@@ -133,6 +133,11 @@
 			<scope>runtime</scope>
 		</dependency>
 
+		<dependency>
+			<groupId>org.springframework.kafka</groupId>
+			<artifactId>spring-kafka</artifactId>
+		</dependency>
+
 	</dependencies>
 
 	<build>
@@ -191,6 +196,7 @@
 						<exclude>**/mapper/**</exclude>
 						<exclude>**/client/**</exclude>
 						<exclude>**/specification/**</exclude>
+						<exclude>**/kafka/**</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
