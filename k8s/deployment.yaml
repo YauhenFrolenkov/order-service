@@ -1,0 +1,67 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: order-service
+spec:
+  replicas: 1
+
+  selector:
+    matchLabels:
+      app: order-service
+
+  template:
+    metadata:
+      labels:
+        app: order-service
+
+    spec:
+      containers:
+        - name: order-service
+          image: api-gateway-order-service:latest
+          imagePullPolicy: Never
+
+          ports:
+            - containerPort: 8080
+
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              value: docker
+
+            - name: DB_URL
+              value: jdbc:postgresql://host.docker.internal:5434/order_service_db
+
+            - name: DB_USERNAME
+              value: postgres
+
+            - name: DB_PASSWORD
+              value: postgres
+
+            - name: JWT_SECRET
+              value: superSecretKeyThatIsLongEnoughForJwt123456789
+
+            - name: USER_SERVICE_URL
+              value: http://user-service:8080
+
+            - name: KAFKA_BOOTSTRAP_SERVERS
+              value: kafka:9092
+
+          startupProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            failureThreshold: 30
+            periodSeconds: 10
+
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 10
+
+          readinessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
