@@ -18,4 +18,6 @@ public interface OrderService {
     List<OrderResponseDto> getOrdersByUserId(Long userId);
     OrderResponseDto updateOrder(Long id, UpdateOrderRequestDto dto);
     void deleteOrder(Long id);
+    void markAsPaid(Long orderId);
+    void markAsFailed(Long orderId);
 }

@@ -294,6 +294,54 @@ class OrderServiceImplTest {
         assertEquals(OrderStatus.PROCESSING, result.getStatus());
     }
 
+    @Test
+    void testMarkAsPaid_Success() {
+        order.setStatus(OrderStatus.PROCESSING);
+
+        when(orderRepository.findByIdAndDeletedFalse(1L))
+                .thenReturn(Optional.of(order));
+
+        orderService.markAsPaid(1L);
+
+        assertEquals(OrderStatus.COMPLETED, order.getStatus());
+    }
+
+    @Test
+    void testMarkAsFailed_Success() {
+        order.setStatus(OrderStatus.PROCESSING);
+
+        when(orderRepository.findByIdAndDeletedFalse(1L))
+                .thenReturn(Optional.of(order));
+
+        orderService.markAsFailed(1L);
+
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+    }
+
+    @Test
+    void testMarkAsPaid_AlreadyCompleted() {
+        order.setStatus(OrderStatus.COMPLETED);
+
+        when(orderRepository.findByIdAndDeletedFalse(1L))
+                .thenReturn(Optional.of(order));
+
+        orderService.markAsPaid(1L);
+
+        assertEquals(OrderStatus.COMPLETED, order.getStatus());
+    }
+
+    @Test
+    void testMarkAsFailed_AlreadyCancelled() {
+        order.setStatus(OrderStatus.CANCELLED);
+
+        when(orderRepository.findByIdAndDeletedFalse(1L))
+                .thenReturn(Optional.of(order));
+
+        orderService.markAsFailed(1L);
+
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+    }
+
     @AfterEach
     void tearDown() {
         SecurityContextHolder.clearContext();
